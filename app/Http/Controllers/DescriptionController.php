@@ -34,7 +34,8 @@ class DescriptionController extends Controller
             "\nWrite a new description for this video.";
 
         try {
-            $response = (new DescriptionWriter)->prompt($context);
+            // Local "thinking" models can take well over a minute to respond.
+            $response = (new DescriptionWriter)->prompt($context, timeout: 170);
         } catch (Throwable $e) {
             report($e);
 

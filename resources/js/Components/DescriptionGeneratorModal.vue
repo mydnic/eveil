@@ -75,7 +75,7 @@ async function publish() {
         <template #body>
             <div v-if="step === 'loading'" class="flex flex-col items-center gap-3 py-12">
                 <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-(--ui-text-muted)" />
-                <p class="text-(--ui-text-muted)">Writing a description…</p>
+                <p class="text-(--ui-text-muted)">Writing a description… this can take a minute or two with local models.</p>
             </div>
 
             <div v-else-if="step === 'error'" class="flex flex-col items-center gap-4 py-12 text-center">
