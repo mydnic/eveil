@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import DescriptionGeneratorModal from '@/Components/DescriptionGeneratorModal.vue';
 import SortableTableHeader from '@/Components/SortableTableHeader.vue';
 import ThumbnailGeneratorModal from '@/Components/ThumbnailGeneratorModal.vue';
 import { Head, router } from '@inertiajs/vue3';
@@ -13,7 +14,8 @@ const props = defineProps({
 });
 
 const localVideos = ref(props.videos);
-const generatorOpen = ref(false);
+const thumbnailGeneratorOpen = ref(false);
+const descriptionGeneratorOpen = ref(false);
 const activeVideo = ref(null);
 
 const search = ref('');
@@ -45,9 +47,14 @@ function clearFilters() {
     dateTo.value = '';
 }
 
-function openGenerator(video) {
+function openThumbnailGenerator(video) {
     activeVideo.value = video;
-    generatorOpen.value = true;
+    thumbnailGeneratorOpen.value = true;
+}
+
+function openDescriptionGenerator(video) {
+    activeVideo.value = video;
+    descriptionGeneratorOpen.value = true;
 }
 
 function onThumbnailPublished(dataUrl) {
@@ -246,7 +253,16 @@ function formatNumber(value) {
                                 color="neutral"
                                 variant="ghost"
                                 size="sm"
-                                @click="openGenerator(row.original)"
+                                @click="openThumbnailGenerator(row.original)"
+                            />
+                        </UTooltip>
+                        <UTooltip text="Generate description">
+                            <UButton
+                                icon="i-lucide-file-text"
+                                color="neutral"
+                                variant="ghost"
+                                size="sm"
+                                @click="openDescriptionGenerator(row.original)"
                             />
                         </UTooltip>
                         <UTooltip text="Watch on YouTube">
@@ -275,9 +291,11 @@ function formatNumber(value) {
         </template>
 
         <ThumbnailGeneratorModal
-            v-model:open="generatorOpen"
+            v-model:open="thumbnailGeneratorOpen"
             :video="activeVideo"
             @published="onThumbnailPublished"
         />
+
+        <DescriptionGeneratorModal v-model:open="descriptionGeneratorOpen" :video="activeVideo" />
     </AuthenticatedLayout>
 </template>

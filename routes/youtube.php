@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DescriptionController;
 use App\Http\Controllers\ThumbnailController;
 use App\Http\Controllers\VideosController;
 use App\Http\Controllers\YoutubeAuthController;
@@ -15,4 +16,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/videos/{video}/thumbnail/candidates', [ThumbnailController::class, 'candidates'])->name('videos.thumbnail.candidates');
     Route::post('/videos/{video}/thumbnail/publish', [ThumbnailController::class, 'publish'])->name('videos.thumbnail.publish');
     Route::post('/thumbnail/preview', [ThumbnailController::class, 'preview'])->name('thumbnail.preview');
+
+    Route::post('/videos/{video}/description/generate', [DescriptionController::class, 'generate'])->name('videos.description.generate');
+    Route::post('/videos/{video}/description/publish', [DescriptionController::class, 'publish'])->name('videos.description.publish');
 });

@@ -113,6 +113,42 @@ class YoutubeClient
     }
 
     /**
+     * Fetch a single video's snippet and statistics.
+     */
+    public function fetchVideo(YoutubeAccount $account, string $videoId): array
+    {
+        $video = Http::withToken($this->accessToken($account))
+            ->get(self::API_BASE.'/videos', ['part' => 'snippet,statistics', 'id' => $videoId])
+            ->throw()
+            ->json('items.0');
+
+        if (! $video) {
+            throw new RuntimeException("Video {$videoId} not found.");
+        }
+
+        return $video;
+    }
+
+    /**
+     * Replace a video's description, preserving its other snippet fields
+     * (title, tags, category, ...) since YouTube's API replaces the whole
+     * snippet on update.
+     */
+    public function updateDescription(YoutubeAccount $account, string $videoId, string $description): void
+    {
+        $accessToken = $this->accessToken($account);
+        $snippet = $this->fetchVideo($account, $videoId)['snippet'];
+        $snippet['description'] = $description;
+
+        Http::withToken($accessToken)
+            ->put(self::API_BASE.'/videos?'.http_build_query(['part' => 'snippet']), [
+                'id' => $videoId,
+                'snippet' => $snippet,
+            ])
+            ->throw();
+    }
+
+    /**
      * Upload a new thumbnail (PNG bytes) for the given video.
      */
     public function setThumbnail(YoutubeAccount $account, string $videoId, string $pngBytes): void
