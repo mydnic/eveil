@@ -10,6 +10,11 @@ const navItems = [
         to: route('dashboard'),
         active: route().current('dashboard'),
     },
+    {
+        label: 'Videos',
+        to: route('videos.index'),
+        active: route().current('videos.index'),
+    },
 ];
 
 const userMenuItems = [
