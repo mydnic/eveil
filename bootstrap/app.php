@@ -17,7 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        //
+        // Eveil is meant to run behind a reverse proxy (Cloudflare Tunnel,
+        // nginx, Traefik, ...) that terminates TLS. Trust the forwarded
+        // headers so route()/url() generate the right scheme and host.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
