@@ -62,7 +62,7 @@ async function selectCandidate(url) {
     step.value = 'previewing';
 
     try {
-        const { data } = await axios.post(route('videos.thumbnail.preview'), {
+        const { data } = await axios.post(route('thumbnail.preview'), {
             image_url: url,
             game: game.value,
             boss: boss.value,

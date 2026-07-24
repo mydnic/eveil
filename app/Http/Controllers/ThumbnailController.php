@@ -11,7 +11,7 @@ use Throwable;
 
 class ThumbnailController extends Controller
 {
-    public function candidates(Request $request, string $video, ThumbnailComposer $composer, ImageSearchService $search): JsonResponse
+    public function candidates(Request $request, ThumbnailComposer $composer, ImageSearchService $search): JsonResponse
     {
         $data = $request->validate(['title' => ['required', 'string']]);
 

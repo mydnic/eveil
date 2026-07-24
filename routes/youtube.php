@@ -13,6 +13,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/videos', [VideosController::class, 'index'])->name('videos.index');
 
     Route::post('/videos/{video}/thumbnail/candidates', [ThumbnailController::class, 'candidates'])->name('videos.thumbnail.candidates');
-    Route::post('/videos/{video}/thumbnail/preview', [ThumbnailController::class, 'preview'])->name('videos.thumbnail.preview');
     Route::post('/videos/{video}/thumbnail/publish', [ThumbnailController::class, 'publish'])->name('videos.thumbnail.publish');
+    Route::post('/thumbnail/preview', [ThumbnailController::class, 'preview'])->name('thumbnail.preview');
 });
