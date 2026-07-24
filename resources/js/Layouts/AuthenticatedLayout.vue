@@ -1,5 +1,6 @@
 <script setup>
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import FlashToaster from '@/Components/FlashToaster.vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 
 const page = usePage();
@@ -44,6 +45,8 @@ const userMenuItems = [
 
 <template>
     <UApp>
+        <FlashToaster />
+
         <UHeader :to="route('dashboard')">
             <template #title>
                 <ApplicationLogo class="h-8 w-auto fill-current text-(--ui-primary)" />
