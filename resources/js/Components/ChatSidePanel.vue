@@ -16,11 +16,11 @@ function xsrfToken() {
     return match ? decodeURIComponent(match[1]) : '';
 }
 
-const { messages, sendMessage, status } = useChat({
+const { messages, sendMessage, status, error } = useChat({
     messages: props.initialMessages,
     transport: new DefaultChatTransport({
         api: props.endpoint,
-        headers: () => ({ 'X-XSRF-TOKEN': xsrfToken() }),
+        headers: { 'X-XSRF-TOKEN': xsrfToken() },
     }),
 });
 
@@ -33,8 +33,8 @@ function onSubmit() {
         return;
     }
 
-    sendMessage({ text });
     input.value = '';
+    sendMessage({ text });
 }
 </script>
 
@@ -49,6 +49,15 @@ function onSubmit() {
                 </template>
             </template>
         </UChatMessages>
+
+        <UAlert
+            v-if="error"
+            color="error"
+            variant="subtle"
+            icon="i-lucide-triangle-alert"
+            :title="error.message || 'Something went wrong.'"
+            class="mb-2"
+        />
 
         <UChatPrompt
             v-model="input"
