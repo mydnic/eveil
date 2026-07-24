@@ -14,7 +14,10 @@ class YoutubeAuthController extends Controller
     public function connect(): RedirectResponse
     {
         return Socialite::driver('google')
-            ->scopes(['https://www.googleapis.com/auth/youtube'])
+            ->scopes([
+                'https://www.googleapis.com/auth/youtube',
+                'https://www.googleapis.com/auth/yt-analytics.readonly',
+            ])
             ->with(['access_type' => 'offline', 'prompt' => 'consent'])
             ->redirect();
     }

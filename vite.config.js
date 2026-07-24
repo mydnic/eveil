@@ -19,6 +19,7 @@ export default defineConfig({
         }),
         ui({
             inertia: true,
+            prose: true,
         }),
     ],
 });

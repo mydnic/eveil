@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DescriptionGeneratorModal from '@/Components/DescriptionGeneratorModal.vue';
 import SortableTableHeader from '@/Components/SortableTableHeader.vue';
 import ThumbnailGeneratorModal from '@/Components/ThumbnailGeneratorModal.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 const props = defineProps({
@@ -197,7 +197,12 @@ function formatNumber(value) {
                                 {{ row.original.duration }}
                             </span>
                         </div>
-                        <span class="line-clamp-2 min-w-0 font-medium">{{ row.original.title }}</span>
+                        <Link
+                            :href="route('videos.show', row.original.video_id)"
+                            class="line-clamp-2 min-w-0 font-medium hover:underline"
+                        >
+                            {{ row.original.title }}
+                        </Link>
                     </div>
                 </template>
 

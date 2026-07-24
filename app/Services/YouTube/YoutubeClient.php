@@ -18,13 +18,16 @@ class YoutubeClient
     /**
      * Fetch the authenticated Google account's own YouTube channel.
      *
-     * @return array{id: string, title: string, thumbnail_url: ?string, uploads_playlist_id: string}
+     * @return array{
+     *     id: string, title: string, thumbnail_url: ?string, uploads_playlist_id: string,
+     *     subscriber_count: ?int, view_count: ?int, video_count: ?int
+     * }
      */
     public function fetchChannel(string $accessToken): array
     {
         $channel = Http::withToken($accessToken)
             ->get(self::API_BASE.'/channels', [
-                'part' => 'snippet,contentDetails',
+                'part' => 'snippet,contentDetails,statistics',
                 'mine' => 'true',
             ])
             ->throw()
@@ -34,11 +37,16 @@ class YoutubeClient
             throw new RuntimeException('This Google account has no YouTube channel.');
         }
 
+        $stats = $channel['statistics'] ?? [];
+
         return [
             'id' => $channel['id'],
             'title' => $channel['snippet']['title'],
             'thumbnail_url' => $channel['snippet']['thumbnails']['default']['url'] ?? null,
             'uploads_playlist_id' => $channel['contentDetails']['relatedPlaylists']['uploads'],
+            'subscriber_count' => isset($stats['subscriberCount']) ? (int) $stats['subscriberCount'] : null,
+            'view_count' => isset($stats['viewCount']) ? (int) $stats['viewCount'] : null,
+            'video_count' => isset($stats['videoCount']) ? (int) $stats['videoCount'] : null,
         ];
     }
 
