@@ -38,3 +38,29 @@ docker compose up -d
 
 Eveil is now available at `http://localhost:8000` (configurable via
 `APP_PORT` in `.env`).
+
+## Connecting a YouTube channel
+
+Eveil needs its own Google OAuth credentials to read your channel's videos
+and update thumbnails. This is a one-time setup on
+[Google Cloud Console](https://console.cloud.google.com/):
+
+1. Create a new project (or pick an existing one).
+2. Go to **APIs & Services → Library**, search for **YouTube Data API v3**,
+   and enable it.
+3. Go to **APIs & Services → OAuth consent screen**. Choose **External**,
+   fill in the required fields, and add your own Google account under
+   **Test users** (no Google review needed for personal use).
+4. Go to **APIs & Services → Credentials → Create Credentials → OAuth client
+   ID**. Choose **Web application**, and under **Authorized redirect URIs**
+   add the value of `GOOGLE_REDIRECT_URI` from your `.env`
+   (`http://localhost:8000/youtube/callback` by default — update the host/port
+   if you changed `APP_PORT` or are deploying behind a domain).
+5. Copy the generated **Client ID** and **Client secret** into `.env`:
+
+   ```bash
+   GOOGLE_CLIENT_ID=...
+   GOOGLE_CLIENT_SECRET=...
+   ```
+
+6. Restart the app (`docker compose up -d`) and click **Connect YouTube**.
