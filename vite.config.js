@@ -20,6 +20,12 @@ export default defineConfig({
         ui({
             inertia: true,
             prose: true,
+            ui: {
+                colors: {
+                    primary: 'red',
+                    neutral: 'mauve',
+                },
+            },
         }),
     ],
 });
