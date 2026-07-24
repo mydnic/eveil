@@ -116,7 +116,7 @@ function formatNumber(value) {
 
         <UTable v-else :data="localVideos" :columns="columns" class="shrink-0">
             <template #title-cell="{ row }">
-                <div class="flex min-w-72 items-center gap-3 py-1">
+                <div class="flex max-w-md items-center gap-3 py-1">
                     <div class="relative w-32 shrink-0">
                         <img
                             :src="row.original.thumbnail_url"
@@ -129,7 +129,7 @@ function formatNumber(value) {
                             {{ row.original.duration }}
                         </span>
                     </div>
-                    <span class="line-clamp-2 font-medium">{{ row.original.title }}</span>
+                    <span class="line-clamp-2 min-w-0 font-medium">{{ row.original.title }}</span>
                 </div>
             </template>
 
