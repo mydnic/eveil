@@ -32,6 +32,11 @@ const userMenuItems = [
             icon: 'i-lucide-user-cog',
             to: route('profile.edit'),
         },
+        {
+            label: 'Thumbnail template',
+            icon: 'i-lucide-image',
+            to: route('settings.thumbnail-template.edit'),
+        },
     ],
     [
         {

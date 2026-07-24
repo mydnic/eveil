@@ -1,13 +1,32 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ThumbnailGeneratorModal from '@/Components/ThumbnailGeneratorModal.vue';
 import { Head, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
-defineProps({
+const props = defineProps({
     connected: Boolean,
     channel: Object,
     videos: Array,
     error: String,
 });
+
+const localVideos = ref(props.videos);
+const generatorOpen = ref(false);
+const activeVideo = ref(null);
+
+function openGenerator(video) {
+    activeVideo.value = video;
+    generatorOpen.value = true;
+}
+
+function onThumbnailPublished(dataUrl) {
+    const video = localVideos.value.find((v) => v.video_id === activeVideo.value.video_id);
+
+    if (video) {
+        video.thumbnail_url = dataUrl;
+    }
+}
 
 const privacyColor = {
     public: 'success',
@@ -91,11 +110,11 @@ function formatNumber(value) {
             </UButton>
         </div>
 
-        <div v-else-if="videos.length === 0" class="py-24 text-center text-(--ui-text-muted)">
+        <div v-else-if="localVideos.length === 0" class="py-24 text-center text-(--ui-text-muted)">
             No videos found on this channel.
         </div>
 
-        <UTable v-else :data="videos" :columns="columns" class="shrink-0">
+        <UTable v-else :data="localVideos" :columns="columns" class="shrink-0">
             <template #title-cell="{ row }">
                 <div class="flex min-w-72 items-center gap-3 py-1">
                     <div class="relative w-32 shrink-0">
@@ -144,6 +163,15 @@ function formatNumber(value) {
 
             <template #actions-cell="{ row }">
                 <div class="flex items-center justify-end gap-1">
+                    <UTooltip text="Generate thumbnail">
+                        <UButton
+                            icon="i-lucide-image-plus"
+                            color="neutral"
+                            variant="ghost"
+                            size="sm"
+                            @click="openGenerator(row.original)"
+                        />
+                    </UTooltip>
                     <UTooltip text="Watch on YouTube">
                         <UButton
                             :to="`https://youtube.com/watch?v=${row.original.video_id}`"
@@ -167,5 +195,11 @@ function formatNumber(value) {
                 </div>
             </template>
         </UTable>
+
+        <ThumbnailGeneratorModal
+            v-model:open="generatorOpen"
+            :video="activeVideo"
+            @published="onThumbnailPublished"
+        />
     </AuthenticatedLayout>
 </template>

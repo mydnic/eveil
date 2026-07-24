@@ -11,6 +11,8 @@ class YoutubeClient
 {
     private const API_BASE = 'https://www.googleapis.com/youtube/v3';
 
+    private const UPLOAD_BASE = 'https://www.googleapis.com/upload/youtube/v3';
+
     private const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
     /**
@@ -108,6 +110,19 @@ class YoutubeClient
         $this->attachVideoDetails($accessToken, $videos);
 
         return array_values($videos);
+    }
+
+    /**
+     * Upload a new thumbnail (PNG bytes) for the given video.
+     */
+    public function setThumbnail(YoutubeAccount $account, string $videoId, string $pngBytes): void
+    {
+        $accessToken = $this->accessToken($account);
+
+        Http::withToken($accessToken)
+            ->withBody($pngBytes, 'image/png')
+            ->post(self::UPLOAD_BASE.'/thumbnails/set?'.http_build_query(['videoId' => $videoId]))
+            ->throw();
     }
 
     /**

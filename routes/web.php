@@ -26,3 +26,4 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 require __DIR__.'/youtube.php';
+require __DIR__.'/settings.php';

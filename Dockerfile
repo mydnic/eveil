@@ -17,9 +17,10 @@ RUN npm run build
 
 FROM php:8.4-fpm-alpine
 
-RUN apk add --no-cache nginx supervisor sqlite libzip libpng icu-libs \
+RUN apk add --no-cache nginx supervisor sqlite libzip libpng icu-libs freetype libjpeg-turbo libwebp \
     && apk add --no-cache --virtual .build-deps \
-        $PHPIZE_DEPS sqlite-dev libzip-dev libpng-dev icu-dev \
+        $PHPIZE_DEPS sqlite-dev libzip-dev libpng-dev icu-dev freetype-dev libjpeg-turbo-dev libwebp-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install pdo_sqlite zip gd intl bcmath opcache \
     && apk del .build-deps
 
