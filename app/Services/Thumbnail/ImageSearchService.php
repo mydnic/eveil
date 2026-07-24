@@ -15,6 +15,8 @@ class ImageSearchService
 
     private const WIKI_HOST_HINTS = ['fandom.com', 'wiki', 'fextralife.com'];
 
+    private const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+
     /**
      * Find candidate boss art: the wiki's og:image first (usually the best
      * quality artwork), filled out with general image search results.
@@ -89,7 +91,7 @@ class ImageSearchService
     private function extractOgImage(string $url): ?string
     {
         try {
-            $html = Http::timeout(5)->get($url)->body();
+            $html = Http::withHeaders(['User-Agent' => self::USER_AGENT])->timeout(5)->get($url)->body();
         } catch (Throwable) {
             return null;
         }
