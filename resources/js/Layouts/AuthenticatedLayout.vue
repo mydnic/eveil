@@ -37,6 +37,11 @@ const userMenuItems = [
             icon: 'i-lucide-image',
             to: route('settings.thumbnail-template.edit'),
         },
+        {
+            label: 'Channel profile',
+            icon: 'i-lucide-badge-info',
+            to: route('settings.channel-profile.edit'),
+        },
     ],
     [
         {

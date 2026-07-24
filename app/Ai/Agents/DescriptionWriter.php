@@ -2,6 +2,7 @@
 
 namespace App\Ai\Agents;
 
+use App\Models\ChannelProfile;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Promptable;
 use Stringable;
@@ -15,7 +16,7 @@ class DescriptionWriter implements Agent
      */
     public function instructions(): Stringable|string
     {
-        return <<<'EOT'
+        $base = <<<'EOT'
         You write YouTube video descriptions for a gaming channel. Videos are
         boss fights, titled "Game - Boss".
 
@@ -28,5 +29,9 @@ class DescriptionWriter implements Agent
         - End with up to 5 relevant, lowercase hashtags on their own line.
         - Output only the description text, no title, no markdown, no preamble.
         EOT;
+
+        $channelContext = ChannelProfile::current()->promptContext();
+
+        return $channelContext === '' ? $base : "{$base}\n\n{$channelContext}";
     }
 }
