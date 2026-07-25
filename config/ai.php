@@ -141,6 +141,11 @@ return [
             'driver' => 'openai-compatible',
             'url' => env('OPENAI_COMPATIBLE_URL'),
             'key' => env('OPENAI_COMPATIBLE_API_KEY'),
+            'models' => [
+                'text' => [
+                    'default' => env('AI_TEXT_MODEL'),
+                ],
+            ],
         ],
 
         'openrouter' => [

@@ -5,11 +5,14 @@ namespace App\Ai\Agents;
 use App\Ai\Tools\GetChannelDataTool;
 use App\Models\ChannelProfile;
 use App\Models\YoutubeAccount;
+use App\Support\ChatHistory;
 use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Contracts\Tool;
+use Laravel\Ai\Messages\Message;
+use Laravel\Ai\Models\Conversation;
 use Laravel\Ai\Promptable;
 use Stringable;
 
@@ -49,5 +52,20 @@ class ChannelAssistant implements Agent, Conversational, HasTools
     public function tools(): iterable
     {
         return [$this->dataTool];
+    }
+
+    /**
+     * Overrides RemembersConversations' default history loading to strip
+     * tool_calls/tool_results — see App\Support\ChatHistory::toPlainMessages().
+     *
+     * @return Message[]
+     */
+    public function messages(): iterable
+    {
+        $conversation = $this->currentConversation() ? Conversation::find($this->currentConversation()) : null;
+
+        return $conversation
+            ? ChatHistory::toPlainMessages($conversation->messages()->orderBy('created_at')->get())
+            : [];
     }
 }
