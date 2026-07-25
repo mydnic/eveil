@@ -1,9 +1,5 @@
 <script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const form = useForm({
@@ -24,89 +20,57 @@ const submit = () => {
     <GuestLayout>
         <Head title="Register" />
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="name" value="Name" />
-
-                <TextInput
-                    id="name"
-                    type="text"
-                    class="mt-1 block w-full"
+        <form class="flex flex-col gap-6" @submit.prevent="submit">
+            <UFormField label="Name" :error="form.errors.name">
+                <UInput
                     v-model="form.name"
+                    type="text"
+                    class="w-full"
                     required
                     autofocus
                     autocomplete="name"
                 />
+            </UFormField>
 
-                <InputError class="mt-2" :message="form.errors.name" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel for="email" value="Email" />
-
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
+            <UFormField label="Email" :error="form.errors.email">
+                <UInput
                     v-model="form.email"
+                    type="email"
+                    class="w-full"
                     required
                     autocomplete="username"
                 />
+            </UFormField>
 
-                <InputError class="mt-2" :message="form.errors.email" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
+            <UFormField label="Password" :error="form.errors.password">
+                <UInput
                     v-model="form.password"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel
-                    for="password_confirmation"
-                    value="Confirm Password"
-                />
-
-                <TextInput
-                    id="password_confirmation"
                     type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password_confirmation"
+                    class="w-full"
                     required
                     autocomplete="new-password"
                 />
+            </UFormField>
 
-                <InputError
-                    class="mt-2"
-                    :message="form.errors.password_confirmation"
+            <UFormField label="Confirm password" :error="form.errors.password_confirmation">
+                <UInput
+                    v-model="form.password_confirmation"
+                    type="password"
+                    class="w-full"
+                    required
+                    autocomplete="new-password"
                 />
-            </div>
+            </UFormField>
 
-            <div class="mt-4 flex items-center justify-end">
+            <div class="flex items-center justify-end gap-4">
                 <Link
                     :href="route('login')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-100 dark:focus:ring-offset-gray-800"
+                    class="text-sm text-(--ui-text-muted) underline hover:text-(--ui-text)"
                 >
                     Already registered?
                 </Link>
 
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Register
-                </PrimaryButton>
+                <UButton type="submit" :loading="form.processing">Register</UButton>
             </div>
         </form>
     </GuestLayout>

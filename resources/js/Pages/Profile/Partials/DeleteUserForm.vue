@@ -1,12 +1,6 @@
 <script setup>
-import DangerButton from '@/Components/DangerButton.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import Modal from '@/Components/Modal.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import { useForm } from '@inertiajs/vue3';
-import { nextTick, ref } from 'vue';
+import { ref } from 'vue';
 
 const confirmingUserDeletion = ref(false);
 const passwordInput = ref(null);
@@ -15,17 +9,11 @@ const form = useForm({
     password: '',
 });
 
-const confirmUserDeletion = () => {
-    confirmingUserDeletion.value = true;
-
-    nextTick(() => passwordInput.value.focus());
-};
-
 const deleteUser = () => {
     form.delete(route('profile.destroy'), {
         preserveScroll: true,
         onSuccess: () => closeModal(),
-        onError: () => passwordInput.value.focus(),
+        onError: () => passwordInput.value?.inputRef?.focus(),
         onFinish: () => form.reset(),
     });
 };
@@ -39,70 +27,49 @@ const closeModal = () => {
 </script>
 
 <template>
-    <section class="space-y-6">
+    <section class="flex flex-col gap-6">
         <header>
-            <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Delete Account
-            </h2>
+            <h2 class="text-lg font-medium">Delete Account</h2>
 
-            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                Once your account is deleted, all of its resources and data will
-                be permanently deleted. Before deleting your account, please
-                download any data or information that you wish to retain.
+            <p class="mt-1 text-sm text-(--ui-text-muted)">
+                Once your account is deleted, all of its resources and data will be permanently
+                deleted. Before deleting your account, please download any data or information
+                that you wish to retain.
             </p>
         </header>
 
-        <DangerButton @click="confirmUserDeletion">Delete Account</DangerButton>
+        <UButton color="error" class="self-start" @click="confirmingUserDeletion = true">
+            Delete Account
+        </UButton>
 
-        <Modal :show="confirmingUserDeletion" @close="closeModal">
-            <div class="p-6">
-                <h2
-                    class="text-lg font-medium text-gray-900 dark:text-gray-100"
-                >
-                    Are you sure you want to delete your account?
-                </h2>
-
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    Once your account is deleted, all of its resources and data
-                    will be permanently deleted. Please enter your password to
-                    confirm you would like to permanently delete your account.
-                </p>
-
-                <div class="mt-6">
-                    <InputLabel
-                        for="password"
-                        value="Password"
-                        class="sr-only"
-                    />
-
-                    <TextInput
-                        id="password"
+        <UModal
+            v-model:open="confirmingUserDeletion"
+            title="Are you sure you want to delete your account?"
+            description="Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account."
+            @update:open="(value) => !value && closeModal()"
+        >
+            <template #body>
+                <UFormField label="Password" :error="form.errors.password">
+                    <UInput
                         ref="passwordInput"
                         v-model="form.password"
                         type="password"
-                        class="mt-1 block w-3/4"
+                        class="w-full"
                         placeholder="Password"
                         @keyup.enter="deleteUser"
                     />
+                </UFormField>
+            </template>
 
-                    <InputError :message="form.errors.password" class="mt-2" />
-                </div>
+            <template #footer>
+                <div class="flex w-full justify-end gap-3">
+                    <UButton color="neutral" variant="soft" @click="closeModal">Cancel</UButton>
 
-                <div class="mt-6 flex justify-end">
-                    <SecondaryButton @click="closeModal">
-                        Cancel
-                    </SecondaryButton>
-
-                    <DangerButton
-                        class="ms-3"
-                        :class="{ 'opacity-25': form.processing }"
-                        :disabled="form.processing"
-                        @click="deleteUser"
-                    >
+                    <UButton color="error" :loading="form.processing" @click="deleteUser">
                         Delete Account
-                    </DangerButton>
+                    </UButton>
                 </div>
-            </div>
-        </Modal>
+            </template>
+        </UModal>
     </section>
 </template>

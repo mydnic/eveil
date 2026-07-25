@@ -1,9 +1,5 @@
 <script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 
 defineProps({
@@ -25,43 +21,29 @@ const submit = () => {
     <GuestLayout>
         <Head title="Forgot Password" />
 
-        <div class="mb-4 text-sm text-gray-600 dark:text-gray-400">
-            Forgot your password? No problem. Just let us know your email
-            address and we will email you a password reset link that will allow
-            you to choose a new one.
-        </div>
+        <p class="mb-4 text-sm text-(--ui-text-muted)">
+            Forgot your password? No problem. Just let us know your email address and we will
+            email you a password reset link that will allow you to choose a new one.
+        </p>
 
-        <div
-            v-if="status"
-            class="mb-4 text-sm font-medium text-green-600 dark:text-green-400"
-        >
-            {{ status }}
-        </div>
+        <UAlert v-if="status" color="success" variant="soft" :title="status" class="mb-4" />
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="email" value="Email" />
-
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
+        <form class="flex flex-col gap-6" @submit.prevent="submit">
+            <UFormField label="Email" :error="form.errors.email">
+                <UInput
                     v-model="form.email"
+                    type="email"
+                    class="w-full"
                     required
                     autofocus
                     autocomplete="username"
                 />
+            </UFormField>
 
-                <InputError class="mt-2" :message="form.errors.email" />
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
-                <PrimaryButton
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
+            <div class="flex items-center justify-end">
+                <UButton type="submit" :loading="form.processing">
                     Email Password Reset Link
-                </PrimaryButton>
+                </UButton>
             </div>
         </form>
     </GuestLayout>
