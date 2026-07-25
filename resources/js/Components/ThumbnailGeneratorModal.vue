@@ -61,9 +61,13 @@ async function fetchCandidates() {
     }
 }
 
-async function selectCandidate(url) {
-    selectedUrl.value = url;
+async function selectCandidate(candidate) {
+    selectedUrl.value = candidate.url;
     await generatePreview();
+}
+
+function formatResolution(candidate) {
+    return candidate.width && candidate.height ? `${candidate.width}×${candidate.height}` : null;
 }
 
 async function generatePreview() {
@@ -114,7 +118,7 @@ async function publish() {
     <UModal
         :open="open"
         :title="`Generate thumbnail — ${video?.title ?? ''}`"
-        :ui="{ content: 'sm:max-w-3xl' }"
+        :ui="{ content: 'sm:max-w-6xl', body: 'overflow-y-auto' }"
         @update:open="(value) => emit('update:open', value)"
     >
         <template #body>
@@ -141,18 +145,24 @@ async function publish() {
                 <div v-if="step === 'select'">
                     <p class="mb-4 text-sm text-(--ui-text-muted)">
                         Pick the best image of <span class="font-medium">{{ boss }}</span> from
-                        <span class="font-medium">{{ game }}</span
-                        >:
+                        <span class="font-medium">{{ game }}</span> — {{ candidates.length }} results, best
+                        resolution first:
                     </p>
-                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <button
-                            v-for="url in candidates"
-                            :key="url"
+                            v-for="candidate in candidates"
+                            :key="candidate.url"
                             type="button"
-                            class="aspect-video overflow-hidden rounded-(--ui-radius) ring-2 ring-transparent transition hover:ring-(--ui-primary)"
-                            @click="selectCandidate(url)"
+                            class="relative aspect-video overflow-hidden rounded-(--ui-radius) bg-(--ui-bg-elevated) ring-2 ring-transparent transition hover:ring-(--ui-primary)"
+                            @click="selectCandidate(candidate)"
                         >
-                            <img :src="url" class="h-full w-full object-cover" loading="lazy" />
+                            <img :src="candidate.url" class="h-full w-full object-cover" loading="lazy" />
+                            <span
+                                v-if="formatResolution(candidate)"
+                                class="absolute right-1.5 bottom-1.5 rounded bg-black/80 px-1.5 py-0.5 text-xs text-white"
+                            >
+                                {{ formatResolution(candidate) }}
+                            </span>
                         </button>
                     </div>
                 </div>

@@ -17,27 +17,42 @@ class ImageSearchService
 
     private const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
+    // Brave's plan caps requests at 1/second. findCandidates() makes two
+    // calls (web search, then image search) per invocation, so without
+    // spacing them out the second one reliably gets 429'd.
+    private static ?float $lastRequestAt = null;
+
     /**
      * Find candidate boss art: the wiki's og:image first (usually the best
-     * quality artwork), filled out with general image search results.
+     * quality artwork), filled out with general image search results,
+     * highest resolution first.
      *
-     * @return array<int, string> image URLs, deduplicated
+     * @return array<int, array{url: string, width: ?int, height: ?int}> deduplicated by URL
      */
-    public function findCandidates(string $game, string $boss, int $count = 8): array
+    public function findCandidates(string $game, string $boss, int $count = 20): array
     {
         $candidates = [];
+        $seen = [];
 
         if ($wikiImage = $this->findWikiImage($game, $boss)) {
-            $candidates[] = $wikiImage;
+            $candidates[] = ['url' => $wikiImage, 'width' => null, 'height' => null];
+            $seen[$wikiImage] = true;
         }
 
-        foreach ($this->imageSearch("{$boss} {$game} boss", $count) as $url) {
+        $searched = $this->imageSearch("{$boss} {$game} boss", $count);
+
+        // Highest resolution first, so the best-quality options surface at
+        // the top of the picker.
+        usort($searched, fn (array $a, array $b) => ($b['width'] * $b['height']) <=> ($a['width'] * $a['height']));
+
+        foreach ($searched as $result) {
             if (count($candidates) >= $count) {
                 break;
             }
 
-            if (! in_array($url, $candidates, true)) {
-                $candidates[] = $url;
+            if (! isset($seen[$result['url']])) {
+                $candidates[] = $result;
+                $seen[$result['url']] = true;
             }
         }
 
@@ -64,28 +79,51 @@ class ImageSearchService
      */
     private function webSearch(string $query): array
     {
-        $response = Http::withHeaders(['X-Subscription-Token' => $this->apiKey()])
-            ->get(self::WEB_SEARCH_URL, ['q' => $query, 'count' => 10])
-            ->throw()
-            ->json();
+        $response = $this->braveGet(self::WEB_SEARCH_URL, ['q' => $query, 'count' => 10]);
 
         return array_column($response['web']['results'] ?? [], 'url');
     }
 
     /**
-     * @return array<int, string> image URLs
+     * @return array<int, array{url: string, width: int, height: int}>
      */
     private function imageSearch(string $query, int $count): array
     {
+        $response = $this->braveGet(self::IMAGE_SEARCH_URL, ['q' => $query, 'count' => max(20, $count * 2)]);
+
+        return array_map(
+            fn (array $result) => [
+                'url' => $result['properties']['url'],
+                'width' => $result['properties']['width'] ?? null,
+                'height' => $result['properties']['height'] ?? null,
+            ],
+            $response['results'] ?? []
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $query
+     * @return array<string, mixed>
+     */
+    private function braveGet(string $url, array $query): array
+    {
+        if (self::$lastRequestAt !== null) {
+            $sinceLastRequest = microtime(true) - self::$lastRequestAt;
+            $minInterval = 1.05;
+
+            if ($sinceLastRequest < $minInterval) {
+                usleep((int) round(($minInterval - $sinceLastRequest) * 1_000_000));
+            }
+        }
+
         $response = Http::withHeaders(['X-Subscription-Token' => $this->apiKey()])
-            ->get(self::IMAGE_SEARCH_URL, ['q' => $query, 'count' => max(10, $count * 2)])
+            ->get($url, $query)
             ->throw()
             ->json();
 
-        return array_map(
-            fn (array $result) => $result['properties']['url'],
-            $response['results'] ?? []
-        );
+        self::$lastRequestAt = microtime(true);
+
+        return $response;
     }
 
     private function extractOgImage(string $url): ?string
