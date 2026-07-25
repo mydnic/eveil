@@ -21,6 +21,12 @@ const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({
         api: props.endpoint,
         headers: { 'X-XSRF-TOKEN': xsrfToken() },
+        // The backend replays conversation history from the database (see
+        // ChannelAssistant/VideoAssistant::messages()), so only the new
+        // message needs to go over the wire rather than the full thread.
+        prepareSendMessagesRequest: ({ messages: allMessages }) => ({
+            body: { messages: allMessages.slice(-1) },
+        }),
     }),
 });
 
@@ -43,9 +49,9 @@ function onSubmit() {
         <UChatMessages :messages="messages" :status="status" class="flex-1" should-scroll-to-bottom should-auto-scroll>
             <template #content="{ message }">
                 <template v-for="(part, index) in message.parts" :key="`${message.id}-${index}`">
-                    <Comark v-if="part.type === 'text'" :streaming="status === 'streaming'" caret>
-                        {{ part.text }}
-                    </Comark>
+                    <Suspense v-if="part.type === 'text'">
+                        <Comark :markdown="part.text" :streaming="status === 'streaming'" caret />
+                    </Suspense>
                 </template>
             </template>
         </UChatMessages>
