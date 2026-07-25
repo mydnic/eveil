@@ -46,7 +46,13 @@ function onSubmit() {
 
 <template>
     <div class="flex h-full flex-col">
-        <UChatMessages :messages="messages" :status="status" class="flex-1" should-scroll-to-bottom should-auto-scroll>
+        <UChatMessages
+            :messages="messages"
+            :status="status"
+            class="min-h-0 flex-1 overflow-y-auto"
+            should-scroll-to-bottom
+            should-auto-scroll
+        >
             <template #content="{ message }">
                 <template v-for="(part, index) in message.parts" :key="`${message.id}-${index}`">
                     <Suspense v-if="part.type === 'text'">
