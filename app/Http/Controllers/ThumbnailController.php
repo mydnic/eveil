@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ThumbnailTemplate;
 use App\Services\Thumbnail\ImageSearchService;
 use App\Services\Thumbnail\ThumbnailComposer;
 use App\Services\YouTube\YoutubeClient;
@@ -39,6 +40,8 @@ class ThumbnailController extends Controller
             'game' => $parsed['game'],
             'boss' => $parsed['boss'],
             'candidates' => $candidates,
+            'template_id' => ThumbnailTemplate::forGame($parsed['game'])->id,
+            'templates' => ThumbnailTemplate::query()->orderByDesc('is_default')->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -47,7 +50,7 @@ class ThumbnailController extends Controller
         $data = $this->validateComposeRequest($request);
 
         try {
-            $bytes = $composer->compose($data['image_url'], $data['game'], $data['boss']);
+            $bytes = $composer->compose($data['image_url'], $data['game'], $data['boss'], $this->resolveTemplate($data));
         } catch (Throwable $e) {
             report($e);
 
@@ -68,7 +71,7 @@ class ThumbnailController extends Controller
         }
 
         try {
-            $bytes = $composer->compose($data['image_url'], $data['game'], $data['boss']);
+            $bytes = $composer->compose($data['image_url'], $data['game'], $data['boss'], $this->resolveTemplate($data));
             $youtube->setThumbnail($account, $video, $bytes);
         } catch (Throwable $e) {
             report($e);
@@ -80,7 +83,17 @@ class ThumbnailController extends Controller
     }
 
     /**
-     * @return array{image_url: string, game: string, boss: string}
+     * @param  array{image_url: string, game: string, boss: string, template_id: int|null}  $data
+     */
+    private function resolveTemplate(array $data): ThumbnailTemplate
+    {
+        return $data['template_id']
+            ? ThumbnailTemplate::findOrFail($data['template_id'])
+            : ThumbnailTemplate::forGame($data['game']);
+    }
+
+    /**
+     * @return array{image_url: string, game: string, boss: string, template_id: int|null}
      */
     private function validateComposeRequest(Request $request): array
     {
@@ -88,6 +101,7 @@ class ThumbnailController extends Controller
             'image_url' => ['required', 'url'],
             'game' => ['required', 'string'],
             'boss' => ['required', 'string'],
+            'template_id' => ['nullable', 'integer', 'exists:thumbnail_templates,id'],
         ]);
     }
 

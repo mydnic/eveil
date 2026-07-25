@@ -87,7 +87,7 @@ class ThumbnailComposer
 
     private function renderOnto(string $croppedPngBytes, string $game, string $boss, ?ThumbnailTemplate $template): string
     {
-        $template ??= ThumbnailTemplate::current();
+        $template ??= ThumbnailTemplate::default();
 
         $canvas = imagecreatefromstring($croppedPngBytes);
         imagealphablending($canvas, true);

@@ -1,22 +1,29 @@
 <script setup>
 import SettingsLayout from '@/Layouts/SettingsLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
-    template: Object,
+    template: { type: Object, default: null },
     fonts: Array,
 });
 
+const isEditing = !!props.template;
+
 const form = useForm({
-    game_font: props.template.game_font,
-    game_font_color: props.template.game_font_color,
-    boss_font: props.template.boss_font,
-    boss_font_color: props.template.boss_font_color,
-    stroke_color: props.template.stroke_color,
-    stroke_width: props.template.stroke_width,
-    gradient_height_percent: props.template.gradient_height_percent,
+    name: props.template?.name ?? '',
+    is_default: props.template?.is_default ?? false,
+    game_keywords: props.template?.game_keywords ?? '',
+    game_font: props.template?.game_font ?? 'oswald',
+    game_font_color: props.template?.game_font_color ?? '#FF3B30',
+    boss_font: props.template?.boss_font ?? 'anton',
+    boss_font_color: props.template?.boss_font_color ?? '#FFFFFF',
+    stroke_color: props.template?.stroke_color ?? '#000000',
+    stroke_width: props.template?.stroke_width ?? 6,
+    gradient_height_percent: props.template?.gradient_height_percent ?? 55,
 });
+
+const pageTitle = computed(() => (isEditing ? `Edit template — ${props.template.name}` : 'New thumbnail template'));
 
 const previewUrl = ref(null);
 const previewing = ref(false);
@@ -26,7 +33,7 @@ async function refreshPreview() {
     previewing.value = true;
 
     try {
-        const { data } = await axios.post(route('settings.thumbnail-template.preview'), form.data());
+        const { data } = await axios.post(route('settings.thumbnail-templates.preview'), form.data());
         previewUrl.value = data.data_url;
     } finally {
         previewing.value = false;
@@ -43,16 +50,46 @@ watch(
 );
 
 function save() {
-    form.put(route('settings.thumbnail-template.update'), { preserveScroll: true });
+    if (isEditing) {
+        form.put(route('settings.thumbnail-templates.update', props.template.id), { preserveScroll: true });
+    } else {
+        form.post(route('settings.thumbnail-templates.store'));
+    }
 }
 </script>
 
 <template>
-    <Head title="Thumbnail template" />
+    <Head :title="pageTitle" />
 
-    <SettingsLayout title="Thumbnail template">
+    <SettingsLayout :title="pageTitle">
         <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
             <form class="flex flex-col gap-6" @submit.prevent="save">
+                <UCard>
+                    <template #header>
+                        <h3 class="font-medium">Template</h3>
+                    </template>
+
+                    <div class="flex flex-col gap-4">
+                        <UFormField label="Name" :error="form.errors.name">
+                            <UInput v-model="form.name" class="w-full" placeholder="e.g. Battlefield" />
+                        </UFormField>
+
+                        <UFormField
+                            label="Game keywords"
+                            description="Comma-separated. This template is auto-selected when the video's game name contains one of these — e.g. &quot;battlefield, bf6&quot;."
+                            :error="form.errors.game_keywords"
+                        >
+                            <UInput v-model="form.game_keywords" class="w-full" placeholder="battlefield, bf6" />
+                        </UFormField>
+
+                        <UCheckbox
+                            v-model="form.is_default"
+                            label="Use as the default template"
+                            description="Applied whenever no other template's keywords match."
+                        />
+                    </div>
+                </UCard>
+
                 <UCard>
                     <template #header>
                         <h3 class="font-medium">Game name</h3>
@@ -123,7 +160,14 @@ function save() {
                     </div>
                 </UCard>
 
-                <UButton type="submit" :loading="form.processing" class="self-start">Save template</UButton>
+                <div class="flex items-center gap-3">
+                    <UButton type="submit" :loading="form.processing">
+                        {{ isEditing ? 'Save template' : 'Create template' }}
+                    </UButton>
+                    <UButton :to="route('settings.thumbnail-templates.index')" color="neutral" variant="ghost">
+                        Cancel
+                    </UButton>
+                </div>
             </form>
 
             <div class="lg:sticky lg:top-8 lg:self-start">

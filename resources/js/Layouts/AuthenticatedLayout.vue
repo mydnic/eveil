@@ -18,7 +18,7 @@ const navItems = [
     },
     {
         label: 'Settings',
-        to: route('settings.thumbnail-template.edit'),
+        to: route('settings.thumbnail-templates.index'),
         active: route().current('settings.*'),
     },
 ];

@@ -17,6 +17,8 @@ const boss = ref('');
 const candidates = ref([]);
 const selectedUrl = ref(null);
 const previewDataUrl = ref(null);
+const templates = ref([]);
+const templateId = ref(null);
 
 watch(
     () => props.open,
@@ -51,6 +53,8 @@ async function fetchCandidates() {
         game.value = data.game;
         boss.value = data.boss;
         candidates.value = data.candidates;
+        templates.value = data.templates;
+        templateId.value = data.template_id;
         step.value = 'select';
     } catch (error) {
         reportError(error, "Couldn't find candidate images.");
@@ -59,13 +63,18 @@ async function fetchCandidates() {
 
 async function selectCandidate(url) {
     selectedUrl.value = url;
+    await generatePreview();
+}
+
+async function generatePreview() {
     step.value = 'previewing';
 
     try {
         const { data } = await axios.post(route('thumbnail.preview'), {
-            image_url: url,
+            image_url: selectedUrl.value,
             game: game.value,
             boss: boss.value,
+            template_id: templateId.value,
         });
 
         previewDataUrl.value = data.data_url;
@@ -75,6 +84,12 @@ async function selectCandidate(url) {
     }
 }
 
+watch(templateId, () => {
+    if (selectedUrl.value && (step.value === 'preview' || step.value === 'previewing')) {
+        generatePreview();
+    }
+});
+
 async function publish() {
     step.value = 'publishing';
 
@@ -83,6 +98,7 @@ async function publish() {
             image_url: selectedUrl.value,
             game: game.value,
             boss: boss.value,
+            template_id: templateId.value,
         });
 
         toast.add({ title: 'Thumbnail updated on YouTube.', color: 'success' });
@@ -113,47 +129,57 @@ async function publish() {
                 <UButton variant="subtle" color="neutral" @click="fetchCandidates">Try again</UButton>
             </div>
 
-            <div v-else-if="step === 'select'">
-                <p class="mb-4 text-sm text-(--ui-text-muted)">
-                    Pick the best image of <span class="font-medium">{{ boss }}</span> from
-                    <span class="font-medium">{{ game }}</span
-                    >:
-                </p>
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <button
-                        v-for="url in candidates"
-                        :key="url"
-                        type="button"
-                        class="aspect-video overflow-hidden rounded-(--ui-radius) ring-2 ring-transparent transition hover:ring-(--ui-primary)"
-                        @click="selectCandidate(url)"
-                    >
-                        <img :src="url" class="h-full w-full object-cover" loading="lazy" />
-                    </button>
-                </div>
-            </div>
+            <template v-else>
+                <UFormField v-if="templates.length > 1" label="Thumbnail template" class="mb-4">
+                    <USelect
+                        v-model="templateId"
+                        :items="templates.map((t) => ({ label: t.name, value: t.id }))"
+                        class="w-56"
+                    />
+                </UFormField>
 
-            <div v-else-if="step === 'previewing'" class="flex flex-col items-center gap-3 py-12">
-                <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-(--ui-text-muted)" />
-                <p class="text-(--ui-text-muted)">Generating preview…</p>
-            </div>
-
-            <div v-else-if="step === 'preview' || step === 'publishing'" class="flex flex-col items-center gap-4">
-                <img :src="previewDataUrl" class="aspect-video w-full rounded-(--ui-radius) object-cover" />
-                <div class="flex gap-2">
-                    <UButton
-                        variant="subtle"
-                        color="neutral"
-                        icon="i-lucide-arrow-left"
-                        :disabled="step === 'publishing'"
-                        @click="step = 'select'"
-                    >
-                        Choose another image
-                    </UButton>
-                    <UButton icon="i-lucide-upload" :loading="step === 'publishing'" @click="publish">
-                        Publish to YouTube
-                    </UButton>
+                <div v-if="step === 'select'">
+                    <p class="mb-4 text-sm text-(--ui-text-muted)">
+                        Pick the best image of <span class="font-medium">{{ boss }}</span> from
+                        <span class="font-medium">{{ game }}</span
+                        >:
+                    </p>
+                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <button
+                            v-for="url in candidates"
+                            :key="url"
+                            type="button"
+                            class="aspect-video overflow-hidden rounded-(--ui-radius) ring-2 ring-transparent transition hover:ring-(--ui-primary)"
+                            @click="selectCandidate(url)"
+                        >
+                            <img :src="url" class="h-full w-full object-cover" loading="lazy" />
+                        </button>
+                    </div>
                 </div>
-            </div>
+
+                <div v-else-if="step === 'previewing'" class="flex flex-col items-center gap-3 py-12">
+                    <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-(--ui-text-muted)" />
+                    <p class="text-(--ui-text-muted)">Generating preview…</p>
+                </div>
+
+                <div v-else-if="step === 'preview' || step === 'publishing'" class="flex flex-col items-center gap-4">
+                    <img :src="previewDataUrl" class="aspect-video w-full rounded-(--ui-radius) object-cover" />
+                    <div class="flex gap-2">
+                        <UButton
+                            variant="subtle"
+                            color="neutral"
+                            icon="i-lucide-arrow-left"
+                            :disabled="step === 'publishing'"
+                            @click="step = 'select'"
+                        >
+                            Choose another image
+                        </UButton>
+                        <UButton icon="i-lucide-upload" :loading="step === 'publishing'" @click="publish">
+                            Publish to YouTube
+                        </UButton>
+                    </div>
+                </div>
+            </template>
         </template>
     </UModal>
 </template>

@@ -7,10 +7,10 @@ defineProps({
 
 const navItems = [
     {
-        label: 'Thumbnail template',
+        label: 'Thumbnail templates',
         icon: 'i-lucide-image',
-        to: route('settings.thumbnail-template.edit'),
-        active: route().current('settings.thumbnail-template.edit'),
+        to: route('settings.thumbnail-templates.index'),
+        active: route().current('settings.thumbnail-templates.*'),
     },
     {
         label: 'Channel profile',
