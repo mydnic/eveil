@@ -14,6 +14,8 @@ const step = ref('loading');
 const errorMessage = ref(null);
 const game = ref('');
 const boss = ref('');
+const searchQuery = ref('');
+const searching = ref(false);
 const candidates = ref([]);
 const selectedUrl = ref(null);
 const previewDataUrl = ref(null);
@@ -52,12 +54,36 @@ async function fetchCandidates() {
 
         game.value = data.game;
         boss.value = data.boss;
+        searchQuery.value = data.search_query;
         candidates.value = data.candidates;
         templates.value = data.templates;
         templateId.value = data.template_id;
         step.value = 'select';
     } catch (error) {
         reportError(error, "Couldn't find candidate images.");
+    }
+}
+
+async function runSearch() {
+    const query = searchQuery.value.trim();
+
+    if (!query) {
+        return;
+    }
+
+    searching.value = true;
+
+    try {
+        const { data } = await axios.post(route('thumbnail.search'), { query });
+        candidates.value = data.candidates;
+    } catch (error) {
+        toast.add({
+            title: "Couldn't search for images.",
+            description: error?.response?.data?.message,
+            color: 'error',
+        });
+    } finally {
+        searching.value = false;
     }
 }
 
@@ -143,28 +169,50 @@ async function publish() {
                 </UFormField>
 
                 <div v-if="step === 'select'">
-                    <p class="mb-4 text-sm text-(--ui-text-muted)">
-                        Pick the best image of <span class="font-medium">{{ boss }}</span> from
-                        <span class="font-medium">{{ game }}</span> — {{ candidates.length }} results, best
-                        resolution first:
+                    <p class="mb-2 text-sm text-(--ui-text-muted)">
+                        Looking for <span class="font-medium">{{ boss }}</span> from
+                        <span class="font-medium">{{ game }}</span>. Not finding a good one? Tweak the search:
                     </p>
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        <button
-                            v-for="candidate in candidates"
-                            :key="candidate.url"
-                            type="button"
-                            class="relative aspect-video overflow-hidden rounded-(--ui-radius) bg-(--ui-bg-elevated) ring-2 ring-transparent transition hover:ring-(--ui-primary)"
-                            @click="selectCandidate(candidate)"
-                        >
-                            <img :src="candidate.url" class="h-full w-full object-cover" loading="lazy" />
-                            <span
-                                v-if="formatResolution(candidate)"
-                                class="absolute right-1.5 bottom-1.5 rounded bg-black/80 px-1.5 py-0.5 text-xs text-white"
-                            >
-                                {{ formatResolution(candidate) }}
-                            </span>
-                        </button>
+                    <div class="mb-4 flex gap-2">
+                        <UInput
+                            v-model="searchQuery"
+                            placeholder="Search term…"
+                            class="flex-1"
+                            @keyup.enter="runSearch"
+                        />
+                        <UButton icon="i-lucide-search" :loading="searching" @click="runSearch">Search</UButton>
                     </div>
+
+                    <div v-if="searching" class="flex items-center justify-center py-24">
+                        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-(--ui-text-muted)" />
+                    </div>
+
+                    <div v-else-if="candidates.length === 0" class="py-24 text-center text-(--ui-text-muted)">
+                        No images found for this search. Try a different term.
+                    </div>
+
+                    <template v-else>
+                        <p class="mb-3 text-xs text-(--ui-text-dimmed)">
+                            {{ candidates.length }} results, best resolution first
+                        </p>
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <button
+                                v-for="candidate in candidates"
+                                :key="candidate.url"
+                                type="button"
+                                class="relative aspect-video overflow-hidden rounded-(--ui-radius) bg-(--ui-bg-elevated) ring-2 ring-transparent transition hover:ring-(--ui-primary)"
+                                @click="selectCandidate(candidate)"
+                            >
+                                <img :src="candidate.url" class="h-full w-full object-cover" loading="lazy" />
+                                <span
+                                    v-if="formatResolution(candidate)"
+                                    class="absolute right-1.5 bottom-1.5 rounded bg-black/80 px-1.5 py-0.5 text-xs text-white"
+                                >
+                                    {{ formatResolution(candidate) }}
+                                </span>
+                            </button>
+                        </div>
+                    </template>
                 </div>
 
                 <div v-else-if="step === 'previewing'" class="flex flex-col items-center gap-3 py-12">

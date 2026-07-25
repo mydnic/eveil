@@ -23,6 +23,16 @@ class ImageSearchService
     private static ?float $lastRequestAt = null;
 
     /**
+     * The query findCandidates() searches for by default — surfaced to the
+     * frontend so an editable search box can start from what was actually
+     * searched, not guess at it.
+     */
+    public function defaultQuery(string $game, string $boss): string
+    {
+        return "{$boss} {$game} boss";
+    }
+
+    /**
      * Find candidate boss art: the wiki's og:image first (usually the best
      * quality artwork), filled out with general image search results,
      * highest resolution first.
@@ -31,32 +41,47 @@ class ImageSearchService
      */
     public function findCandidates(string $game, string $boss, int $count = 20): array
     {
-        $candidates = [];
+        $wikiImage = $this->findWikiImage($game, $boss);
+        $lead = $wikiImage ? [['url' => $wikiImage, 'width' => null, 'height' => null]] : [];
+
+        return $this->dedupe([...$lead, ...$this->search($this->defaultQuery($game, $boss), $count)], $count);
+    }
+
+    /**
+     * Free-text image search, highest resolution first.
+     *
+     * @return array<int, array{url: string, width: ?int, height: ?int}> deduplicated by URL
+     */
+    public function search(string $query, int $count = 20): array
+    {
+        $results = $this->imageSearch($query, $count);
+
+        usort($results, fn (array $a, array $b) => ($b['width'] * $b['height']) <=> ($a['width'] * $a['height']));
+
+        return $this->dedupe($results, $count);
+    }
+
+    /**
+     * @param  array<int, array{url: string, width: ?int, height: ?int}>  $results
+     * @return array<int, array{url: string, width: ?int, height: ?int}>
+     */
+    private function dedupe(array $results, int $count): array
+    {
         $seen = [];
+        $deduped = [];
 
-        if ($wikiImage = $this->findWikiImage($game, $boss)) {
-            $candidates[] = ['url' => $wikiImage, 'width' => null, 'height' => null];
-            $seen[$wikiImage] = true;
-        }
-
-        $searched = $this->imageSearch("{$boss} {$game} boss", $count);
-
-        // Highest resolution first, so the best-quality options surface at
-        // the top of the picker.
-        usort($searched, fn (array $a, array $b) => ($b['width'] * $b['height']) <=> ($a['width'] * $a['height']));
-
-        foreach ($searched as $result) {
-            if (count($candidates) >= $count) {
+        foreach ($results as $result) {
+            if (count($deduped) >= $count) {
                 break;
             }
 
             if (! isset($seen[$result['url']])) {
-                $candidates[] = $result;
+                $deduped[] = $result;
                 $seen[$result['url']] = true;
             }
         }
 
-        return $candidates;
+        return $deduped;
     }
 
     private function findWikiImage(string $game, string $boss): ?string

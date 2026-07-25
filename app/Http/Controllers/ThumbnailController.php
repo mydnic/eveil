@@ -32,17 +32,29 @@ class ThumbnailController extends Controller
             return response()->json(['message' => 'Image search failed: '.$e->getMessage()], 502);
         }
 
-        if (empty($candidates)) {
-            return response()->json(['message' => 'No candidate images found for "'.$parsed['boss'].'".'], 404);
-        }
-
         return response()->json([
             'game' => $parsed['game'],
             'boss' => $parsed['boss'],
+            'search_query' => $search->defaultQuery($parsed['game'], $parsed['boss']),
             'candidates' => $candidates,
             'template_id' => ThumbnailTemplate::forGame($parsed['game'])->id,
             'templates' => ThumbnailTemplate::query()->orderByDesc('is_default')->orderBy('name')->get(['id', 'name']),
         ]);
+    }
+
+    public function search(Request $request, ImageSearchService $search): JsonResponse
+    {
+        $data = $request->validate(['query' => ['required', 'string', 'max:200']]);
+
+        try {
+            $candidates = $search->search($data['query']);
+        } catch (Throwable $e) {
+            report($e);
+
+            return response()->json(['message' => 'Image search failed: '.$e->getMessage()], 502);
+        }
+
+        return response()->json(['candidates' => $candidates]);
     }
 
     public function preview(Request $request, ThumbnailComposer $composer): JsonResponse
