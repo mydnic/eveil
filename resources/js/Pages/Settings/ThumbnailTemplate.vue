@@ -1,5 +1,5 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import SettingsLayout from '@/Layouts/SettingsLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 
@@ -50,11 +50,7 @@ function save() {
 <template>
     <Head title="Thumbnail template" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h2 class="text-xl font-semibold">Thumbnail template</h2>
-        </template>
-
+    <SettingsLayout title="Thumbnail template">
         <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
             <form class="flex flex-col gap-6" @submit.prevent="save">
                 <UCard>
@@ -143,5 +139,5 @@ function save() {
                 </div>
             </div>
         </div>
-    </AuthenticatedLayout>
+    </SettingsLayout>
 </template>

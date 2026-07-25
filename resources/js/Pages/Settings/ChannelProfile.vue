@@ -1,5 +1,5 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import SettingsLayout from '@/Layouts/SettingsLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
@@ -22,11 +22,7 @@ function save() {
 <template>
     <Head title="Channel profile" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h2 class="text-xl font-semibold">Channel profile</h2>
-        </template>
-
+    <SettingsLayout title="Channel profile">
         <p class="mb-6 max-w-2xl text-(--ui-text-muted)">
             Tell the AI a bit about your channel. This context is used whenever it writes or
             suggests content for you, such as video descriptions.
@@ -67,5 +63,5 @@ function save() {
 
             <UButton type="submit" :loading="form.processing" class="self-start">Save profile</UButton>
         </form>
-    </AuthenticatedLayout>
+    </SettingsLayout>
 </template>
