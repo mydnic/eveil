@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ThumbnailTemplate;
+use App\Models\ThumbnailTemplateText;
 use App\Services\Thumbnail\ThumbnailComposer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -32,9 +33,11 @@ class ThumbnailTemplateController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validateTemplate($request);
-        $template = ThumbnailTemplate::create($data);
 
-        if ($data['is_default'] ?? false) {
+        $template = ThumbnailTemplate::create($data['template']);
+        $template->texts()->createMany($this->orderedTexts($data['texts']));
+
+        if ($data['template']['is_default'] ?? false) {
             $this->makeDefaultInternal($template);
         }
 
@@ -44,7 +47,7 @@ class ThumbnailTemplateController extends Controller
     public function edit(ThumbnailTemplate $thumbnailTemplate): Response
     {
         return Inertia::render('Settings/ThumbnailTemplates/Form', [
-            'template' => $thumbnailTemplate,
+            'template' => $thumbnailTemplate->load('texts'),
             'fonts' => $this->fontOptions(),
         ]);
     }
@@ -52,9 +55,12 @@ class ThumbnailTemplateController extends Controller
     public function update(Request $request, ThumbnailTemplate $thumbnailTemplate): RedirectResponse
     {
         $data = $this->validateTemplate($request);
-        $thumbnailTemplate->update($data);
 
-        if ($data['is_default'] ?? false) {
+        $thumbnailTemplate->update($data['template']);
+        $thumbnailTemplate->texts()->delete();
+        $thumbnailTemplate->texts()->createMany($this->orderedTexts($data['texts']));
+
+        if ($data['template']['is_default'] ?? false) {
             $this->makeDefaultInternal($thumbnailTemplate);
         }
 
@@ -81,10 +87,13 @@ class ThumbnailTemplateController extends Controller
 
     public function preview(Request $request, ThumbnailComposer $composer): JsonResponse
     {
-        $template = new ThumbnailTemplate($this->validateTemplate($request));
+        $data = $this->validateTemplate($request);
+
+        $template = new ThumbnailTemplate($data['template']);
+        $texts = collect($this->orderedTexts($data['texts']))->map(fn (array $text) => new ThumbnailTemplateText($text));
 
         return response()->json([
-            'data_url' => 'data:image/png;base64,'.base64_encode($composer->composeSample($template)),
+            'data_url' => 'data:image/png;base64,'.base64_encode($composer->composeSample($template, $texts)),
         ]);
     }
 
@@ -102,21 +111,46 @@ class ThumbnailTemplateController extends Controller
     }
 
     /**
-     * @return array<string, mixed>
+     * @param  array<int, array<string, mixed>>  $texts
+     * @return array<int, array<string, mixed>>
+     */
+    private function orderedTexts(array $texts): array
+    {
+        return collect($texts)
+            ->values()
+            ->map(fn (array $text, int $index) => [...$text, 'sort_order' => $index])
+            ->all();
+    }
+
+    /**
+     * @return array{template: array<string, mixed>, texts: array<int, array<string, mixed>>}
      */
     private function validateTemplate(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'is_default' => ['sometimes', 'boolean'],
             'game_keywords' => ['nullable', 'string', 'max:500'],
-            'game_font' => ['required', Rule::in(array_keys(ThumbnailTemplate::FONTS))],
-            'game_font_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'boss_font' => ['required', Rule::in(array_keys(ThumbnailTemplate::FONTS))],
-            'boss_font_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'stroke_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'stroke_width' => ['required', 'integer', 'min:0', 'max:20'],
             'gradient_height_percent' => ['required', 'integer', 'min:0', 'max:100'],
+
+            'texts' => ['required', 'array', 'min:1'],
+            'texts.*.kind' => ['required', Rule::in(['game', 'boss', 'fixed'])],
+            'texts.*.content' => ['nullable', 'string', 'max:200'],
+            'texts.*.font' => ['required', Rule::in(array_keys(ThumbnailTemplate::FONTS))],
+            'texts.*.font_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'texts.*.font_size' => ['required', 'integer', 'min:10', 'max:200'],
+            'texts.*.x_percent' => ['required', 'integer', 'min:0', 'max:100'],
+            'texts.*.y_percent' => ['required', 'integer', 'min:0', 'max:100'],
+            'texts.*.align' => ['required', Rule::in(['left', 'center', 'right'])],
+            'texts.*.rotation' => ['required', 'integer', 'min:-180', 'max:180'],
+            'texts.*.stroke_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'texts.*.stroke_width' => ['required', 'integer', 'min:0', 'max:20'],
+            'texts.*.uppercase' => ['sometimes', 'boolean'],
         ]);
+
+        return [
+            'template' => collect($validated)->except('texts')->all(),
+            'texts' => $validated['texts'],
+        ];
     }
 }

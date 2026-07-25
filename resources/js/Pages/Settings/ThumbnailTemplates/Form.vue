@@ -1,5 +1,6 @@
 <script setup>
 import SettingsLayout from '@/Layouts/SettingsLayout.vue';
+import ThumbnailTextLayerFields from '@/Components/ThumbnailTextLayerFields.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
@@ -10,20 +11,78 @@ const props = defineProps({
 
 const isEditing = !!props.template;
 
+function defaultTexts() {
+    return [
+        {
+            kind: 'game',
+            content: null,
+            font: 'oswald',
+            font_color: '#FF3B30',
+            font_size: 48,
+            x_percent: 50,
+            y_percent: 75,
+            align: 'center',
+            rotation: 0,
+            stroke_color: '#000000',
+            stroke_width: 3,
+            uppercase: true,
+        },
+        {
+            kind: 'boss',
+            content: null,
+            font: 'anton',
+            font_color: '#FFFFFF',
+            font_size: 90,
+            x_percent: 50,
+            y_percent: 92,
+            align: 'center',
+            rotation: 0,
+            stroke_color: '#000000',
+            stroke_width: 6,
+            uppercase: true,
+        },
+    ];
+}
+
+function newFixedText() {
+    return {
+        kind: 'fixed',
+        content: '',
+        font: 'oswald',
+        font_color: '#FFFFFF',
+        font_size: 28,
+        x_percent: 50,
+        y_percent: 15,
+        align: 'center',
+        rotation: 0,
+        stroke_color: '#000000',
+        stroke_width: 4,
+        uppercase: true,
+    };
+}
+
 const form = useForm({
     name: props.template?.name ?? '',
     is_default: props.template?.is_default ?? false,
     game_keywords: props.template?.game_keywords ?? '',
-    game_font: props.template?.game_font ?? 'oswald',
-    game_font_color: props.template?.game_font_color ?? '#FF3B30',
-    boss_font: props.template?.boss_font ?? 'anton',
-    boss_font_color: props.template?.boss_font_color ?? '#FFFFFF',
-    stroke_color: props.template?.stroke_color ?? '#000000',
-    stroke_width: props.template?.stroke_width ?? 6,
     gradient_height_percent: props.template?.gradient_height_percent ?? 55,
+    texts: props.template?.texts?.length ? props.template.texts : defaultTexts(),
 });
 
+const gameLayer = computed(() => form.texts.find((t) => t.kind === 'game'));
+const bossLayer = computed(() => form.texts.find((t) => t.kind === 'boss'));
+const fixedLayers = computed(() => form.texts.filter((t) => t.kind === 'fixed'));
+
+function addFixedText() {
+    form.texts.push(newFixedText());
+}
+
+function removeFixedText(layer) {
+    form.texts = form.texts.filter((t) => t !== layer);
+}
+
 const pageTitle = computed(() => (isEditing ? `Edit template — ${props.template.name}` : 'New thumbnail template'));
+const hasTextErrors = computed(() => Object.keys(form.errors).some((key) => key.startsWith('texts.')));
 
 const previewUrl = ref(null);
 const previewing = ref(false);
@@ -82,72 +141,6 @@ function save() {
                             <UInput v-model="form.game_keywords" class="w-full" placeholder="battlefield, bf6" />
                         </UFormField>
 
-                        <UCheckbox
-                            v-model="form.is_default"
-                            label="Use as the default template"
-                            description="Applied whenever no other template's keywords match."
-                        />
-                    </div>
-                </UCard>
-
-                <UCard>
-                    <template #header>
-                        <h3 class="font-medium">Game name</h3>
-                    </template>
-
-                    <div class="flex flex-wrap gap-4">
-                        <UFormField label="Font" :error="form.errors.game_font">
-                            <USelect v-model="form.game_font" :items="fonts" class="w-48" />
-                        </UFormField>
-
-                        <UFormField label="Color" :error="form.errors.game_font_color">
-                            <input
-                                v-model="form.game_font_color"
-                                type="color"
-                                class="h-9 w-16 cursor-pointer rounded-(--ui-radius) border border-(--ui-border) bg-transparent p-1"
-                            />
-                        </UFormField>
-                    </div>
-                </UCard>
-
-                <UCard>
-                    <template #header>
-                        <h3 class="font-medium">Boss name</h3>
-                    </template>
-
-                    <div class="flex flex-wrap gap-4">
-                        <UFormField label="Font" :error="form.errors.boss_font">
-                            <USelect v-model="form.boss_font" :items="fonts" class="w-48" />
-                        </UFormField>
-
-                        <UFormField label="Color" :error="form.errors.boss_font_color">
-                            <input
-                                v-model="form.boss_font_color"
-                                type="color"
-                                class="h-9 w-16 cursor-pointer rounded-(--ui-radius) border border-(--ui-border) bg-transparent p-1"
-                            />
-                        </UFormField>
-                    </div>
-                </UCard>
-
-                <UCard>
-                    <template #header>
-                        <h3 class="font-medium">Stroke &amp; gradient</h3>
-                    </template>
-
-                    <div class="flex flex-wrap gap-4">
-                        <UFormField label="Stroke color" :error="form.errors.stroke_color">
-                            <input
-                                v-model="form.stroke_color"
-                                type="color"
-                                class="h-9 w-16 cursor-pointer rounded-(--ui-radius) border border-(--ui-border) bg-transparent p-1"
-                            />
-                        </UFormField>
-
-                        <UFormField label="Stroke width" :error="form.errors.stroke_width">
-                            <UInput v-model.number="form.stroke_width" type="number" min="0" max="20" class="w-24" />
-                        </UFormField>
-
                         <UFormField label="Gradient height (%)" :error="form.errors.gradient_height_percent">
                             <UInput
                                 v-model.number="form.gradient_height_percent"
@@ -157,8 +150,44 @@ function save() {
                                 class="w-24"
                             />
                         </UFormField>
+
+                        <UCheckbox
+                            v-model="form.is_default"
+                            label="Use as the default template"
+                            description="Applied whenever no other template's keywords match."
+                        />
                     </div>
                 </UCard>
+
+                <UAlert
+                    v-if="hasTextErrors"
+                    color="error"
+                    variant="subtle"
+                    icon="i-lucide-triangle-alert"
+                    title="Some text layer fields are invalid — check the values below."
+                />
+
+                <ThumbnailTextLayerFields v-if="gameLayer" :layer="gameLayer" :fonts="fonts" label="Game name" />
+                <ThumbnailTextLayerFields v-if="bossLayer" :layer="bossLayer" :fonts="fonts" label="Boss name" />
+
+                <ThumbnailTextLayerFields
+                    v-for="layer in fixedLayers"
+                    :key="layer"
+                    :layer="layer"
+                    :fonts="fonts"
+                    removable
+                    @remove="removeFixedText(layer)"
+                />
+
+                <UButton
+                    variant="subtle"
+                    color="neutral"
+                    icon="i-lucide-plus"
+                    class="self-start"
+                    @click="addFixedText"
+                >
+                    Add fixed text
+                </UButton>
 
                 <div class="flex items-center gap-3">
                     <UButton type="submit" :loading="form.processing">

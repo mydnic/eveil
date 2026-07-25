@@ -3,7 +3,9 @@
 namespace App\Services\Thumbnail;
 
 use App\Models\ThumbnailTemplate;
+use App\Models\ThumbnailTemplateText;
 use GdImage;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Image;
 use RuntimeException;
@@ -16,9 +18,9 @@ class ThumbnailComposer
 
     private const MAX_GRADIENT_OPACITY = 0.85;
 
-    private const MIN_FONT_SIZE = 18;
+    private const MIN_FONT_SIZE = 12;
 
-    private const TEXT_MARGIN = 80;
+    private const TEXT_MARGIN = 60;
 
     // Some image hosts return an HTML challenge/error page instead of the
     // image for requests that don't look like a browser.
@@ -45,15 +47,15 @@ class ThumbnailComposer
 
     /**
      * Download the source image, cover-crop it to thumbnail size, and draw
-     * the game/boss text on top per the given (or current) template.
+     * the template's text layers on top.
      *
      * @return string PNG bytes
      */
-    public function compose(string $imageUrl, string $game, string $boss, ?ThumbnailTemplate $template = null): string
+    public function compose(string $imageUrl, string $game, string $boss, ThumbnailTemplate $template): string
     {
         $cropped = Image::fromBytes($this->download($imageUrl))->cover(self::WIDTH, self::HEIGHT)->toPng()->toBytes();
 
-        return $this->renderOnto($cropped, $game, $boss, $template);
+        return $this->renderOnto($cropped, $game, $boss, $template, $template->texts);
     }
 
     private function download(string $url): string
@@ -77,24 +79,30 @@ class ThumbnailComposer
     /**
      * Render a sample thumbnail (synthetic background) for the given
      * template, so the settings screen can preview changes before saving.
+     * $texts overrides the template's persisted layers — used while editing,
+     * before the template (and its new layers) has been saved.
      *
      * @return string PNG bytes
      */
-    public function composeSample(ThumbnailTemplate $template): string
+    public function composeSample(ThumbnailTemplate $template, ?Collection $texts = null): string
     {
-        return $this->renderOnto($this->placeholderCanvas(), 'Sample Game', 'Sample Boss', $template);
+        return $this->renderOnto($this->placeholderCanvas(), 'Sample Game', 'Sample Boss', $template, $texts ?? $template->texts);
     }
 
-    private function renderOnto(string $croppedPngBytes, string $game, string $boss, ?ThumbnailTemplate $template): string
+    /**
+     * @param  Collection<int, ThumbnailTemplateText>  $texts
+     */
+    private function renderOnto(string $croppedPngBytes, string $game, string $boss, ThumbnailTemplate $template, Collection $texts): string
     {
-        $template ??= ThumbnailTemplate::default();
-
         $canvas = imagecreatefromstring($croppedPngBytes);
         imagealphablending($canvas, true);
         imagesavealpha($canvas, true);
 
         $this->drawGradient($canvas, $template);
-        $this->drawText($canvas, $template, $game, $boss);
+
+        foreach ($texts as $layer) {
+            $this->drawTextLayer($canvas, $layer, $layer->resolveContent($game, $boss));
+        }
 
         ob_start();
         imagepng($canvas);
@@ -135,42 +143,49 @@ class ThumbnailComposer
         }
     }
 
-    private function drawText(GdImage $canvas, ThumbnailTemplate $template, string $game, string $boss): void
+    private function drawTextLayer(GdImage $canvas, ThumbnailTemplateText $layer, string $text): void
     {
-        $gameColor = $this->allocateColor($canvas, $template->game_font_color);
-        $bossColor = $this->allocateColor($canvas, $template->boss_font_color);
-        $strokeColor = $this->allocateColor($canvas, $template->stroke_color);
+        if (trim($text) === '') {
+            return;
+        }
 
-        $gameText = mb_strtoupper($game);
-        $bossText = mb_strtoupper($boss);
-
-        $bossFont = $template->bossFontPath();
-        $gameFont = $template->gameFontPath();
+        $font = $layer->fontPath();
         $maxWidth = self::WIDTH - self::TEXT_MARGIN * 2;
+        $size = $this->fitFontSize($font, $text, $layer->font_size, $maxWidth);
+        $width = $this->textWidth($size, $font, $text);
 
-        $bossSize = $this->fitFontSize($bossFont, $bossText, 90, $maxWidth);
-        $gameSize = $this->fitFontSize($gameFont, $gameText, 48, $maxWidth);
+        $anchorX = self::WIDTH * $layer->x_percent / 100;
+        $anchorY = self::HEIGHT * $layer->y_percent / 100;
 
-        $bossY = self::HEIGHT - 60;
-        $gameY = $bossY - $bossSize - 30;
+        $x = match ($layer->align) {
+            'left' => $anchorX,
+            'right' => $anchorX - $width,
+            default => $anchorX - $width / 2,
+        };
 
-        $this->drawStrokedText($canvas, $gameSize, $gameFont, $gameText, $gameColor, $strokeColor, max(2, (int) round($template->stroke_width / 2)), $gameY);
-        $this->drawStrokedText($canvas, $bossSize, $bossFont, $bossText, $bossColor, $strokeColor, $template->stroke_width, $bossY);
+        $color = $this->allocateColor($canvas, $layer->font_color);
+        $strokeColor = $this->allocateColor($canvas, $layer->stroke_color);
+
+        $this->drawStrokedText(
+            $canvas, $size, $font, $text, $color, $strokeColor, $layer->stroke_width,
+            (int) round($x), (int) round($anchorY), $layer->rotation,
+        );
     }
 
-    private function drawStrokedText(GdImage $canvas, int $size, string $font, string $text, int $color, int $strokeColor, int $strokeWidth, int $y): void
-    {
-        $x = $this->centeredX($size, $font, $text);
+    private function drawStrokedText(
+        GdImage $canvas, int $size, string $font, string $text, int $color, int $strokeColor,
+        int $strokeWidth, int $x, int $y, int $angle = 0,
+    ): void {
         $steps = max(8, $strokeWidth * 4);
 
         for ($i = 0; $i < $steps; $i++) {
-            $angle = 2 * M_PI * $i / $steps;
-            $dx = (int) round(cos($angle) * $strokeWidth);
-            $dy = (int) round(sin($angle) * $strokeWidth);
-            imagettftext($canvas, $size, 0, (int) round($x) + $dx, $y + $dy, $strokeColor, $font, $text);
+            $stepAngle = 2 * M_PI * $i / $steps;
+            $dx = (int) round(cos($stepAngle) * $strokeWidth);
+            $dy = (int) round(sin($stepAngle) * $strokeWidth);
+            imagettftext($canvas, $size, $angle, $x + $dx, $y + $dy, $strokeColor, $font, $text);
         }
 
-        imagettftext($canvas, $size, 0, (int) round($x), $y, $color, $font, $text);
+        imagettftext($canvas, $size, $angle, $x, $y, $color, $font, $text);
     }
 
     private function fitFontSize(string $font, string $text, int $baseSize, int $maxWidth): int
@@ -189,11 +204,6 @@ class ThumbnailComposer
         $box = imagettfbbox($size, 0, $font, $text);
 
         return $box[2] - $box[0];
-    }
-
-    private function centeredX(int $size, string $font, string $text): float
-    {
-        return (self::WIDTH - $this->textWidth($size, $font, $text)) / 2;
     }
 
     private function allocateColor(GdImage $canvas, string $hex): int

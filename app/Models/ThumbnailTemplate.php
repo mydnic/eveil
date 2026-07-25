@@ -4,39 +4,39 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable([
-    'name',
-    'is_default',
-    'game_keywords',
-    'game_font',
-    'game_font_color',
-    'boss_font',
-    'boss_font_color',
-    'stroke_color',
-    'stroke_width',
-    'gradient_height_percent',
-])]
+#[Fillable(['name', 'is_default', 'game_keywords', 'gradient_height_percent'])]
 class ThumbnailTemplate extends Model
 {
     /**
-     * Bundled fonts available for the game/boss text, keyed by the value
-     * stored in game_font/boss_font.
+     * Bundled fonts available for template text, keyed by the value stored
+     * in thumbnail_template_texts.font.
      */
     public const FONTS = [
         'anton' => ['label' => 'Anton', 'file' => 'Anton-Regular.ttf'],
         'oswald' => ['label' => 'Oswald', 'file' => 'Oswald-Bold.ttf'],
         'bebas_neue' => ['label' => 'Bebas Neue', 'file' => 'BebasNeue-Regular.ttf'],
         'archivo_black' => ['label' => 'Archivo Black', 'file' => 'ArchivoBlack-Regular.ttf'],
+        'bangers' => ['label' => 'Bangers', 'file' => 'Bangers-Regular.ttf'],
+        'alfa_slab_one' => ['label' => 'Alfa Slab One', 'file' => 'AlfaSlabOne-Regular.ttf'],
+        'black_ops_one' => ['label' => 'Black Ops One', 'file' => 'BlackOpsOne-Regular.ttf'],
+        'russo_one' => ['label' => 'Russo One', 'file' => 'RussoOne-Regular.ttf'],
+        'righteous' => ['label' => 'Righteous', 'file' => 'Righteous-Regular.ttf'],
+        'passion_one' => ['label' => 'Passion One', 'file' => 'PassionOne-Bold.ttf'],
     ];
 
     protected function casts(): array
     {
         return [
             'is_default' => 'boolean',
-            'stroke_width' => 'integer',
             'gradient_height_percent' => 'integer',
         ];
+    }
+
+    public function texts(): HasMany
+    {
+        return $this->hasMany(ThumbnailTemplateText::class)->orderBy('sort_order');
     }
 
     /**
@@ -46,17 +46,46 @@ class ThumbnailTemplate extends Model
      */
     public static function default(): self
     {
-        return static::query()->firstOrCreate(['is_default' => true], [
+        $template = static::query()->where('is_default', true)->first();
+
+        if ($template) {
+            return $template;
+        }
+
+        $template = static::query()->create([
             'name' => 'Default',
             'is_default' => true,
-            'game_font' => 'oswald',
-            'game_font_color' => '#FF3B30',
-            'boss_font' => 'anton',
-            'boss_font_color' => '#FFFFFF',
-            'stroke_color' => '#000000',
-            'stroke_width' => 6,
             'gradient_height_percent' => 55,
         ]);
+
+        $template->texts()->createMany([
+            [
+                'kind' => 'game',
+                'font' => 'oswald',
+                'font_color' => '#FF3B30',
+                'font_size' => 48,
+                'x_percent' => 50,
+                'y_percent' => 75,
+                'align' => 'center',
+                'stroke_color' => '#000000',
+                'stroke_width' => 3,
+                'sort_order' => 0,
+            ],
+            [
+                'kind' => 'boss',
+                'font' => 'anton',
+                'font_color' => '#FFFFFF',
+                'font_size' => 90,
+                'x_percent' => 50,
+                'y_percent' => 92,
+                'align' => 'center',
+                'stroke_color' => '#000000',
+                'stroke_width' => 6,
+                'sort_order' => 1,
+            ],
+        ]);
+
+        return $template->load('texts');
     }
 
     /**
@@ -90,15 +119,5 @@ class ThumbnailTemplate extends Model
             ->filter()
             ->values()
             ->all();
-    }
-
-    public function gameFontPath(): string
-    {
-        return resource_path('fonts/'.self::FONTS[$this->game_font]['file']);
-    }
-
-    public function bossFontPath(): string
-    {
-        return resource_path('fonts/'.self::FONTS[$this->boss_font]['file']);
     }
 }
