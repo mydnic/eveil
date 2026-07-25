@@ -8,7 +8,14 @@ const props = defineProps({
     endpoint: { type: String, required: true },
     initialMessages: { type: Array, default: () => [] },
     placeholder: { type: String, default: 'Ask something…' },
+    // When set, "data-description-suggestion" parts render as a card with a
+    // "Publish to YouTube" button that posts here instead of plain text.
+    descriptionPublishEndpoint: { type: String, default: null },
 });
+
+const emit = defineEmits(['description-published']);
+
+const toast = useToast();
 
 function xsrfToken() {
     const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
@@ -42,6 +49,29 @@ function onSubmit() {
     input.value = '';
     sendMessage({ text });
 }
+
+const publishingSuggestionId = ref(null);
+const publishedSuggestionIds = ref(new Set());
+
+async function publishDescriptionSuggestion(part) {
+    publishingSuggestionId.value = part.id;
+
+    try {
+        await axios.post(props.descriptionPublishEndpoint, { description: part.data.description });
+
+        publishedSuggestionIds.value = new Set(publishedSuggestionIds.value).add(part.id);
+        toast.add({ title: 'Description updated on YouTube.', color: 'success' });
+        emit('description-published', part.data.description);
+    } catch (err) {
+        toast.add({
+            title: "Couldn't update the description.",
+            description: err?.response?.data?.message,
+            color: 'error',
+        });
+    } finally {
+        publishingSuggestionId.value = null;
+    }
+}
 </script>
 
 <template>
@@ -58,6 +88,34 @@ function onSubmit() {
                     <Suspense v-if="part.type === 'text'">
                         <Comark :markdown="part.text" :streaming="status === 'streaming'" caret />
                     </Suspense>
+
+                    <UCard v-else-if="part.type === 'data-description-suggestion'" class="mt-2">
+                        <template #header>
+                            <p class="text-sm font-medium">Suggested description</p>
+                        </template>
+
+                        <p class="text-sm whitespace-pre-wrap">{{ part.data.description }}</p>
+
+                        <div v-if="descriptionPublishEndpoint" class="mt-3 flex justify-end">
+                            <UBadge
+                                v-if="publishedSuggestionIds.has(part.id)"
+                                color="success"
+                                variant="subtle"
+                                icon="i-lucide-check"
+                            >
+                                Published to YouTube
+                            </UBadge>
+                            <UButton
+                                v-else
+                                size="sm"
+                                icon="i-lucide-upload"
+                                :loading="publishingSuggestionId === part.id"
+                                @click="publishDescriptionSuggestion(part)"
+                            >
+                                Publish to YouTube
+                            </UButton>
+                        </div>
+                    </UCard>
                 </template>
             </template>
         </UChatMessages>

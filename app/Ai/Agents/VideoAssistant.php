@@ -3,6 +3,7 @@
 namespace App\Ai\Agents;
 
 use App\Ai\Tools\GetVideoAnalyticsTool;
+use App\Ai\Tools\SuggestVideoDescriptionTool;
 use App\Models\ChannelProfile;
 use App\Support\ChatHistory;
 use Laravel\Ai\Concerns\RemembersConversations;
@@ -22,6 +23,7 @@ class VideoAssistant implements Agent, Conversational, HasTools
     public function __construct(
         private readonly array $video,
         private readonly GetVideoAnalyticsTool $analyticsTool,
+        private readonly SuggestVideoDescriptionTool $descriptionTool,
     ) {}
 
     /**
@@ -29,12 +31,17 @@ class VideoAssistant implements Agent, Conversational, HasTools
      */
     public function instructions(): Stringable|string
     {
+        $description = $this->video['description'] !== ''
+            ? "Current description:\n{$this->video['description']}"
+            : 'Current description: (none)';
+
         $base = <<<EOT
         You are an assistant helping a YouTube creator understand and improve one
         specific video. Be concise and concrete — suggest specific, actionable
         improvements (title, thumbnail, description, retention hooks, pacing) rather
         than generic advice. Use the analytics tool if the creator asks about trends
-        or a time range you don't already have.
+        or a time range you don't already have. Use the description tool whenever
+        asked to write, rewrite, or tweak the description.
 
         Video you are discussing:
         Title: {$this->video['title']}
@@ -42,6 +49,7 @@ class VideoAssistant implements Agent, Conversational, HasTools
         Views: {$this->video['view_count']}
         Likes: {$this->video['like_count']}
         Comments: {$this->video['comment_count']}
+        {$description}
         EOT;
 
         $channelContext = ChannelProfile::current()->promptContext();
@@ -56,7 +64,7 @@ class VideoAssistant implements Agent, Conversational, HasTools
      */
     public function tools(): iterable
     {
-        return [$this->analyticsTool];
+        return [$this->analyticsTool, $this->descriptionTool];
     }
 
     /**

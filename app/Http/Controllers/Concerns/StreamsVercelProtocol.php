@@ -19,9 +19,15 @@ trait StreamsVercelProtocol
      * final text, so we compute the answer that way and just re-encode it
      * in the wire format the frontend already expects.
      */
-    protected function streamText(string $text): StreamedResponse
+    /**
+     * @param  array<int, array{type: string, id?: string, data: mixed}>  $dataParts  Extra
+     *         structured "data-*" parts (see the Vercel AI SDK UI Message Stream Protocol)
+     *         sent alongside the text, e.g. a tool's structured output for the frontend to
+     *         render specially instead of as plain text.
+     */
+    protected function streamText(string $text, array $dataParts = []): StreamedResponse
     {
-        return response()->stream(function () use ($text) {
+        return response()->stream(function () use ($text, $dataParts) {
             $id = (string) Str::uuid();
 
             $send = function (array $event) {
@@ -35,6 +41,15 @@ trait StreamsVercelProtocol
             };
 
             $send(['type' => 'start']);
+
+            foreach ($dataParts as $part) {
+                $send([
+                    'type' => $part['type'],
+                    'id' => $part['id'] ?? (string) Str::uuid(),
+                    'data' => $part['data'],
+                ]);
+            }
+
             $send(['type' => 'text-start', 'id' => $id]);
             $send(['type' => 'text-delta', 'id' => $id, 'delta' => $text]);
             $send(['type' => 'text-end', 'id' => $id]);

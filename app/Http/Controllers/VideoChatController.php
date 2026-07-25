@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Ai\Agents\VideoAssistant;
 use App\Ai\Tools\GetVideoAnalyticsTool;
+use App\Ai\Tools\SuggestVideoDescriptionTool;
 use App\Http\Controllers\Concerns\StreamsVercelProtocol;
 use App\Models\Video;
 use App\Services\YouTube\YoutubeAnalyticsClient;
@@ -31,6 +32,8 @@ class VideoChatController extends Controller
             ->pluck('text')
             ->implode('');
 
+        $descriptionTool = new SuggestVideoDescriptionTool;
+
         $agent = new VideoAssistant(
             [
                 'title' => $videoData['snippet']['title'],
@@ -38,12 +41,21 @@ class VideoChatController extends Controller
                 'view_count' => $videoData['statistics']['viewCount'] ?? 'unknown',
                 'like_count' => $videoData['statistics']['likeCount'] ?? 'hidden',
                 'comment_count' => $videoData['statistics']['commentCount'] ?? 'unknown',
+                'description' => $videoData['snippet']['description'] ?? '',
             ],
             new GetVideoAnalyticsTool($account, $video, $analytics),
+            $descriptionTool,
         );
 
         $response = $agent->continueLastConversation($videoModel)->prompt($text);
 
-        return $this->streamText((string) $response);
+        $dataParts = $descriptionTool->suggestedDescription !== null ? [
+            [
+                'type' => 'data-description-suggestion',
+                'data' => ['description' => $descriptionTool->suggestedDescription],
+            ],
+        ] : [];
+
+        return $this->streamText((string) $response, $dataParts);
     }
 }

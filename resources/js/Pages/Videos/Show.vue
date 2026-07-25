@@ -147,7 +147,9 @@ function formatDate(value) {
                     <ChatSidePanel
                         :endpoint="route('videos.chat', localVideo.video_id)"
                         :initial-messages="chatMessages"
+                        :description-publish-endpoint="route('videos.description.publish', localVideo.video_id)"
                         placeholder="Ask for ideas to improve this video…"
+                        @description-published="onDescriptionPublished"
                     />
                 </UCard>
             </div>
