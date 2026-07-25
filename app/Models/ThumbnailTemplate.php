@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'is_default', 'game_keywords', 'gradient_height_percent'])]
+#[Fillable(['name', 'is_default', 'game_keywords', 'gradient_height_percent', 'gradient_position'])]
 class ThumbnailTemplate extends Model
 {
     /**
@@ -56,6 +56,7 @@ class ThumbnailTemplate extends Model
             'name' => 'Default',
             'is_default' => true,
             'gradient_height_percent' => 55,
+            'gradient_position' => 'bottom',
         ]);
 
         $template->texts()->createMany([

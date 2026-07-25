@@ -132,6 +132,7 @@ class ThumbnailTemplateController extends Controller
             'is_default' => ['sometimes', 'boolean'],
             'game_keywords' => ['nullable', 'string', 'max:500'],
             'gradient_height_percent' => ['required', 'integer', 'min:0', 'max:100'],
+            'gradient_position' => ['required', Rule::in(['top', 'bottom', 'both'])],
 
             'texts' => ['required', 'array', 'min:1'],
             'texts.*.kind' => ['required', Rule::in(['game', 'boss', 'fixed'])],

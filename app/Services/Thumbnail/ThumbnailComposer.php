@@ -133,10 +133,30 @@ class ThumbnailComposer
     private function drawGradient(GdImage $canvas, ThumbnailTemplate $template): void
     {
         $gradientHeight = (int) round(self::HEIGHT * $template->gradient_height_percent / 100);
-        $startY = self::HEIGHT - $gradientHeight;
 
-        for ($y = $startY; $y < self::HEIGHT; $y++) {
-            $progress = ($y - $startY) / $gradientHeight;
+        if ($gradientHeight <= 0) {
+            return;
+        }
+
+        $position = $template->gradient_position;
+
+        if ($position === 'bottom' || $position === 'both') {
+            // Darkest at the bottom edge, fading out upward.
+            $this->drawGradientBand($canvas, self::HEIGHT - $gradientHeight, self::HEIGHT, top: false);
+        }
+
+        if ($position === 'top' || $position === 'both') {
+            // Darkest at the top edge, fading out downward.
+            $this->drawGradientBand($canvas, 0, $gradientHeight, top: true);
+        }
+    }
+
+    private function drawGradientBand(GdImage $canvas, int $startY, int $endY, bool $top): void
+    {
+        $height = $endY - $startY;
+
+        for ($y = $startY; $y < $endY; $y++) {
+            $progress = $top ? 1 - ($y - $startY) / $height : ($y - $startY) / $height;
             $alpha = (int) round(127 * (1 - $progress * self::MAX_GRADIENT_OPACITY));
             $color = imagecolorallocatealpha($canvas, 0, 0, 0, $alpha);
             imageline($canvas, 0, $y, self::WIDTH, $y, $color);

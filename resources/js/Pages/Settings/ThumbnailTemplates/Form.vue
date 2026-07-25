@@ -66,6 +66,7 @@ const form = useForm({
     is_default: props.template?.is_default ?? false,
     game_keywords: props.template?.game_keywords ?? '',
     gradient_height_percent: props.template?.gradient_height_percent ?? 55,
+    gradient_position: props.template?.gradient_position ?? 'bottom',
     texts: props.template?.texts?.length ? props.template.texts : defaultTexts(),
 });
 
@@ -141,15 +142,29 @@ function save() {
                             <UInput v-model="form.game_keywords" class="w-full" placeholder="battlefield, bf6" />
                         </UFormField>
 
-                        <UFormField label="Gradient height (%)" :error="form.errors.gradient_height_percent">
-                            <UInput
-                                v-model.number="form.gradient_height_percent"
-                                type="number"
-                                min="0"
-                                max="100"
-                                class="w-24"
-                            />
-                        </UFormField>
+                        <div class="flex flex-wrap gap-4">
+                            <UFormField label="Gradient height (%)" :error="form.errors.gradient_height_percent">
+                                <UInput
+                                    v-model.number="form.gradient_height_percent"
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    class="w-24"
+                                />
+                            </UFormField>
+
+                            <UFormField label="Gradient position" :error="form.errors.gradient_position">
+                                <USelect
+                                    v-model="form.gradient_position"
+                                    :items="[
+                                        { label: 'Bottom', value: 'bottom' },
+                                        { label: 'Top', value: 'top' },
+                                        { label: 'Top and bottom', value: 'both' },
+                                    ]"
+                                    class="w-40"
+                                />
+                            </UFormField>
+                        </div>
 
                         <UCheckbox
                             v-model="form.is_default"
